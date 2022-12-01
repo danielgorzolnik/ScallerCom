@@ -2,6 +2,7 @@
 #define ForoCom_h
 #include <Arduino.h>
 #include "frame.h"
+#include "structs.h"
 #include "enums.h"
 
 class ScallerCom{
