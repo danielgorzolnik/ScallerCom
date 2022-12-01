@@ -8,11 +8,11 @@
 class ScallerCom{
     using my_callback = void (*)(scaller_frame *Foro_Frame);
     private:
-        byte module_address;
         DeviceMode device_mode = MODE_SLAVE;
-        DeviceType device_type = RELAY_8;
         my_callback _callback;
     public:   
+        byte module_address;
+        DeviceType device_type = RELAY_8;
         void init();
         void send(scaller_frame *Scaller_Frame);
         void setType(DeviceType);
