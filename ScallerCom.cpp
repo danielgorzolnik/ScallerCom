@@ -21,6 +21,23 @@ void ScallerCom::init(){
     softSerial.begin(port_speed);
 }
 
+void ScallerCom::send(scaller_frame *Scaller_Frame){
+    generate_checksum(Scaller_Frame);
+    send_frame(Scaller_Frame);
+}
+
+void ScallerCom::setAddress(byte address){
+    this->module_address = address;
+}
+
+void ScallerCom::setType(DeviceType d_type){
+    this->device_type = d_type;
+}
+
+void ScallerCom::setMode(DeviceMode d_mode){
+    this->device_mode = d_mode;
+}
+
 void ScallerCom::scallercom_read(){ //function is called every 1ms
     if (softSerial.available() > 0){
         byte incoming_byte = softSerial.read();
@@ -36,9 +53,14 @@ void ScallerCom::scallercom_read(){ //function is called every 1ms
             transmission_started = false;
             if (calculate_crc(frame_buffer)){
                 scaller_frame Scaller_Frame = generate_struct(frame_buffer);
-                _callback(&Scaller_Frame);
-                generate_checksum(&Scaller_Frame);
-                send_frame(&Scaller_Frame); //send data
+                if (this->device_mode == MODE_SLAVE && Scaller_Frame.address == this->module_address){
+                    _callback(&Scaller_Frame);
+                    generate_checksum(&Scaller_Frame);
+                    send_frame(&Scaller_Frame); //send data
+                }
+                else if (this->device_mode == MODE_MASTER){
+                    _callback(&Scaller_Frame);
+                }
             }
         }
         else if (transmission_started){

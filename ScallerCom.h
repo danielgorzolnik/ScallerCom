@@ -2,18 +2,20 @@
 #define ForoCom_h
 #include <Arduino.h>
 #include "frame.h"
+#include "enums.h"
 
 class ScallerCom{
     using my_callback = void (*)(scaller_frame *Foro_Frame);
     private:
         byte module_address;
+        DeviceMode device_mode = MODE_SLAVE;
+        DeviceType device_type = RELAY_8;
         my_callback _callback;
-        void execute_command(scaller_frame *Scaller_Frame);
-        void generate_frame(scaller_frame *Scaller_Frame);
-    public:
+    public:   
         void init();
-        void write(scaller_frame);
-        void setType(byte);
+        void send(scaller_frame *Scaller_Frame);
+        void setType(DeviceType);
+        void setMode(DeviceMode);
         void setAddress(byte);
         void scallercom_read();
         void add_callback(my_callback get_callback)
@@ -21,6 +23,5 @@ class ScallerCom{
             _callback = get_callback;
         }
 };
-
 
 #endif
