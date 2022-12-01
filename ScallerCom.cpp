@@ -3,7 +3,6 @@
 #include <SoftwareSerial.h>
 #include "ScallerCom.h"
 #include "config.h"
-#include "functions.h"
 
 //Soft seria;
 SoftwareSerial softSerial (port_rx_pin, port_tx_pin);
