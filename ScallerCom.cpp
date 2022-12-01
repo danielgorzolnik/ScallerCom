@@ -54,7 +54,7 @@ void ScallerCom::scallercom_read(){ //function is called every 1ms
             transmission_started = false;
             if (calculate_crc(frame_buffer)){
                 scaller_frame Scaller_Frame = generate_struct(frame_buffer);
-                if (this->device_mode == MODE_SLAVE && Scaller_Frame.address == this->module_address){
+                if (this->device_mode == MODE_SLAVE && (Scaller_Frame.address == this->module_address || Scaller_Frame.address == 0xffff)){
                     _callback(&Scaller_Frame);
                     generate_checksum(&Scaller_Frame);
                     send_frame(&Scaller_Frame); //send data
