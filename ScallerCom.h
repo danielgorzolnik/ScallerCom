@@ -10,6 +10,8 @@ class ScallerCom{
     private:
         DeviceMode device_mode = MODE_SLAVE;
         my_callback _callback;
+        byte pin_rs485 = 0xff;
+        void send_frame(scaller_frame *);
     public:   
         byte module_address;
         DeviceType device_type = RELAY_8;
@@ -19,6 +21,7 @@ class ScallerCom{
         void setMode(DeviceMode);
         void setAddress(byte);
         void scallercom_read();
+        void set485pin(byte);
         void add_callback(my_callback get_callback)
         {
             _callback = get_callback;
