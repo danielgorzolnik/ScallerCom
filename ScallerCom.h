@@ -4,6 +4,7 @@
 #include "frame.h"
 #include "structs.h"
 #include "enums.h"
+#include "functions.h"
 
 class ScallerCom{
     using my_callback = void (*)(scaller_frame *Foro_Frame);
