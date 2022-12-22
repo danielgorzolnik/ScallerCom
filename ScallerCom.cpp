@@ -3,8 +3,9 @@
 #include <SoftwareSerial.h>
 #include "ScallerCom.h"
 #include "config.h"
+#include "functions.h"
 
-//Soft seria;
+// Soft serial
 // SoftwareSerial softSerial (port_rx_pin, port_tx_pin);
 
 byte frame_buffer[frame_buffer_size];
@@ -19,11 +20,6 @@ void generate_checksum(scaller_frame *Scaller_Frame);
 
 void ScallerCom::init(){
     Serial.begin(port_speed);
-}
-
-void ScallerCom::send(scaller_frame *Scaller_Frame){
-    generate_checksum(Scaller_Frame);
-    send_frame(Scaller_Frame);
 }
 
 void ScallerCom::setAddress(byte address){
@@ -83,6 +79,30 @@ void ScallerCom::scallercom_read(){ //function is called every 1ms
     }
 }
 
+void ScallerCom::send(scaller_frame *Scaller_Frame){
+    generate_checksum(Scaller_Frame);
+    send_frame(Scaller_Frame);
+}
+
+void ScallerCom::send_frame(scaller_frame *Scaller_Frame){
+    if (this->pin_rs485 != 0xff){
+        digitalWrite(this->pin_rs485, HIGH);
+        _delay_ms(4);
+    }
+    Serial.write(frame_start_byte);
+    Serial.write(Scaller_Frame->address);
+    Serial.write((Scaller_Frame->function >> 8) & 0xff);
+    Serial.write(Scaller_Frame->function);
+    Serial.write(Scaller_Frame->data_size);
+    for (byte i=0; i<Scaller_Frame->data_size; i++){
+        Serial.write(Scaller_Frame->data[i]);
+    }
+    Serial.write(Scaller_Frame->checksum);
+    Serial.write(frame_stop_byte);
+    Serial.flush();
+    if (this->pin_rs485 != 0xff) digitalWrite(this->pin_rs485, LOW);
+}
+
 bool calculate_crc(byte *buffer){
     uint16_t sum = 0;
     byte data_size = buffer[frame_position_data_size];
@@ -123,23 +143,4 @@ void generate_checksum(scaller_frame *Scaller_Frame){
         sum = sum + Scaller_Frame->data[i];
     }
     Scaller_Frame->checksum = sum % 0xff;
-}
-
-void ScallerCom::send_frame(scaller_frame *Scaller_Frame){
-    if (this->pin_rs485 != 0xff){
-        digitalWrite(this->pin_rs485, HIGH);
-        _delay_ms(4);
-    }
-    Serial.write(frame_start_byte);
-    Serial.write(Scaller_Frame->address);
-    Serial.write((Scaller_Frame->function >> 8) & 0xff);
-    Serial.write(Scaller_Frame->function);
-    Serial.write(Scaller_Frame->data_size);
-    for (byte i=0; i<Scaller_Frame->data_size; i++){
-        Serial.write(Scaller_Frame->data[i]);
-    }
-    Serial.write(Scaller_Frame->checksum);
-    Serial.write(frame_stop_byte);
-    Serial.flush();
-    if (this->pin_rs485 != 0xff) digitalWrite(this->pin_rs485, LOW);
 }
