@@ -2,7 +2,7 @@
 #define ForoCom_h
 #include <Arduino.h>
 #include "frame.h"
-#include "structs/structs.h"
+#include "structs/common.h"
 #include "structs/relay.h"
 #include "enums.h"
 #include "functions.h"
