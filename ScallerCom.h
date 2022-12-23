@@ -4,6 +4,7 @@
 #include "frame.h"
 #include "structs/common.h"
 #include "structs/relay.h"
+#include "structs/input.h"
 #include "enums.h"
 #include "functions.h"
 
