@@ -6,4 +6,4 @@ struct INPUT_STATUS {
     uint8_t changed;
     uint8_t type;
     uint8_t relay[3];
-}
+};
