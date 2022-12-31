@@ -9,6 +9,8 @@
 #define frame_position_data 4
 
 //port settings
+#define SCALLER_SOFTESRIAL
+
 #define port_speed 38400
 #define port_rx_pin 2
 #define port_tx_pin 3

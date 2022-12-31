@@ -6,7 +6,10 @@
 #include "functions.h"
 
 // Soft serial
-// SoftwareSerial softSerial (port_rx_pin, port_tx_pin);
+
+#if defined(SCALLER_SOFTESRIAL)
+    SoftwareSerial softSerial (port_rx_pin, port_tx_pin);
+#endif
 
 byte frame_buffer[frame_buffer_size];
 byte actual_frame_position = 0;
@@ -19,7 +22,11 @@ void send_frame(scaller_frame *Scaller_Frame);
 void generate_checksum(scaller_frame *Scaller_Frame);
 
 void ScallerCom::init(){
-    Serial.begin(port_speed);
+    #if defined(SCALLER_SOFTESRIAL)
+        softSerial.begin(port_speed);
+    #else
+        Serial.begin(port_speed);
+    #endif
 }
 
 void ScallerCom::setAddress(byte address){
@@ -41,8 +48,19 @@ void ScallerCom::set485pin(byte pin){
 }
 
 void ScallerCom::scallercom_read(){ //function is called every 1ms
-    if (Serial.available() > 0){
-        byte incoming_byte = Serial.read();
+    uint8_t available;
+    #if defined(SCALLER_SOFTESRIAL)
+        available = softSerial.available();
+    #else
+        available = Serial.available();
+    #endif
+    if (available){
+        byte incoming_byte;
+        #if defined(SCALLER_SOFTESRIAL)
+            incoming_byte = softSerial.read();
+        #else
+            incoming_byte = Serial.read();
+        #endif
         if (incoming_byte == frame_start_byte && actual_frame_position == 0 && !transmission_started){ //start transmission
             for (byte i = 0; i < frame_buffer_size; i++) frame_buffer[i] = 0; //clean frame
             transmission_started = true;
@@ -89,17 +107,31 @@ void ScallerCom::send_frame(scaller_frame *Scaller_Frame){
         digitalWrite(this->pin_rs485, HIGH);
         _delay_ms(4);
     }
-    Serial.write(frame_start_byte);
-    Serial.write(Scaller_Frame->address);
-    Serial.write((Scaller_Frame->function >> 8) & 0xff);
-    Serial.write(Scaller_Frame->function);
-    Serial.write(Scaller_Frame->data_size);
-    for (byte i=0; i<Scaller_Frame->data_size; i++){
-        Serial.write(Scaller_Frame->data[i]);
-    }
-    Serial.write(Scaller_Frame->checksum);
-    Serial.write(frame_stop_byte);
-    Serial.flush();
+    #if defined(SCALLER_SOFTESRIAL)
+        softSerial.write(frame_start_byte);
+        softSerial.write(Scaller_Frame->address);
+        softSerial.write((Scaller_Frame->function >> 8) & 0xff);
+        softSerial.write(Scaller_Frame->function);
+        softSerial.write(Scaller_Frame->data_size);
+        for (byte i=0; i<Scaller_Frame->data_size; i++){
+            softSerial.write(Scaller_Frame->data[i]);
+        }
+        softSerial.write(Scaller_Frame->checksum);
+        softSerial.write(frame_stop_byte);
+        softSerial.flush();
+    #else
+        Serial.write(frame_start_byte);
+        Serial.write(Scaller_Frame->address);
+        Serial.write((Scaller_Frame->function >> 8) & 0xff);
+        Serial.write(Scaller_Frame->function);
+        Serial.write(Scaller_Frame->data_size);
+        for (byte i=0; i<Scaller_Frame->data_size; i++){
+            Serial.write(Scaller_Frame->data[i]);
+        }
+        Serial.write(Scaller_Frame->checksum);
+        Serial.write(frame_stop_byte);
+        Serial.flush();
+    #endif
     if (this->pin_rs485 != 0xff) digitalWrite(this->pin_rs485, LOW);
 }
 
