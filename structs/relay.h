@@ -1,4 +1,5 @@
-#include <Arduino.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct RELAY_STATUS {
     uint8_t status;

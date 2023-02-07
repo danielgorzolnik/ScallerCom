@@ -1,35 +1,28 @@
 //define for scallercom
-#include <Arduino.h>
-#include <SoftwareSerial.h>
-#include "ScallerCom.h"
 #include "config.h"
 #include "functions.h"
+#include "ScallerCom.h"
+#include "hardware/uart.h"
+#include "hardware/gpio.h"
+#include "../config.h"
+#include <stdio.h>
+#include "pico/stdlib.h"
 
-// Soft serial
-
-#if defined(SCALLER_SOFTESRIAL)
-    SoftwareSerial softSerial (port_rx_pin, port_tx_pin);
-#endif
-
-byte frame_buffer[frame_buffer_size];
-byte actual_frame_position = 0;
+uint8_t frame_buffer[frame_buffer_size];
+uint8_t actual_frame_position = 0;
 bool transmission_started = false;
 
 //functions
-bool calculate_crc(byte *buffer);
-scaller_frame generate_struct(byte *buffer);
+bool calculate_crc(uint8_t *buffer);
+scaller_frame generate_struct(uint8_t *buffer);
 void send_frame(scaller_frame *Scaller_Frame);
 void generate_checksum(scaller_frame *Scaller_Frame);
 
 void ScallerCom::init(){
-    #if defined(SCALLER_SOFTESRIAL)
-        softSerial.begin(port_speed);
-    #else
-        Serial.begin(port_speed);
-    #endif
+    
 }
 
-void ScallerCom::setAddress(byte address){
+void ScallerCom::setAddress(uint8_t address){
     this->module_address = address;
 }
 
@@ -41,28 +34,18 @@ void ScallerCom::setMode(DeviceMode d_mode){
     this->device_mode = d_mode;
 }
 
-void ScallerCom::set485pin(byte pin){
+void ScallerCom::set485pin(uint8_t pin){
     this->pin_rs485 = pin;
-    pinMode(this->pin_rs485, OUTPUT);
-    digitalWrite(this->pin_rs485, LOW);
+    gpio_init(this->pin_rs485);
+    gpio_set_dir(this->pin_rs485, GPIO_OUT);
+    gpio_put(this->pin_rs485, 0);
 }
 
-void ScallerCom::scallercom_read(){ //function is called every 1ms
-    uint8_t available;
-    #if defined(SCALLER_SOFTESRIAL)
-        available = softSerial.available();
-    #else
-        available = Serial.available();
-    #endif
-    if (available){
-        byte incoming_byte;
-        #if defined(SCALLER_SOFTESRIAL)
-            incoming_byte = softSerial.read();
-        #else
-            incoming_byte = Serial.read();
-        #endif
+void ScallerCom::scallercom_read(){
+    if (uart_is_readable(UART_SCALLER_DEVICE)){
+        uint8_t incoming_byte = uart_getc(UART_SCALLER_DEVICE);
         if (incoming_byte == frame_start_byte && actual_frame_position == 0 && !transmission_started){ //start transmission
-            for (byte i = 0; i < frame_buffer_size; i++) frame_buffer[i] = 0; //clean frame
+            for (uint8_t i = 0; i < frame_buffer_size; i++) frame_buffer[i] = 0; //clean frame
             transmission_started = true;
         }
         else if (incoming_byte == frame_stop_byte && 
@@ -104,42 +87,31 @@ void ScallerCom::send(scaller_frame *Scaller_Frame){
 
 void ScallerCom::send_frame(scaller_frame *Scaller_Frame){
     if (this->pin_rs485 != 0xff){
-        digitalWrite(this->pin_rs485, HIGH);
-        _delay_ms(4);
+        gpio_put(this->pin_rs485, 1);
+        sleep_ms(4);
     }
-    #if defined(SCALLER_SOFTESRIAL)
-        softSerial.write(frame_start_byte);
-        softSerial.write(Scaller_Frame->address);
-        softSerial.write((Scaller_Frame->function >> 8) & 0xff);
-        softSerial.write(Scaller_Frame->function);
-        softSerial.write(Scaller_Frame->data_size);
-        for (byte i=0; i<Scaller_Frame->data_size; i++){
-            softSerial.write(Scaller_Frame->data[i]);
-        }
-        softSerial.write(Scaller_Frame->checksum);
-        softSerial.write(frame_stop_byte);
-        softSerial.flush();
-    #else
-        Serial.write(frame_start_byte);
-        Serial.write(Scaller_Frame->address);
-        Serial.write((Scaller_Frame->function >> 8) & 0xff);
-        Serial.write(Scaller_Frame->function);
-        Serial.write(Scaller_Frame->data_size);
-        for (byte i=0; i<Scaller_Frame->data_size; i++){
-            Serial.write(Scaller_Frame->data[i]);
-        }
-        Serial.write(Scaller_Frame->checksum);
-        Serial.write(frame_stop_byte);
-        Serial.flush();
-    #endif
-    if (this->pin_rs485 != 0xff) digitalWrite(this->pin_rs485, LOW);
+    uart_putc(UART_SCALLER_DEVICE, frame_start_byte);
+    uart_putc(UART_SCALLER_DEVICE, Scaller_Frame->address);
+    uart_putc(UART_SCALLER_DEVICE, (Scaller_Frame->function >> 8) & 0xff);
+    uart_putc(UART_SCALLER_DEVICE, Scaller_Frame->function);
+    uart_putc(UART_SCALLER_DEVICE, Scaller_Frame->data_size);
+    for (uint8_t i=0; i<Scaller_Frame->data_size; i++){
+        uart_putc(UART_SCALLER_DEVICE, Scaller_Frame->data[i]);
+    }
+    uart_putc(UART_SCALLER_DEVICE, Scaller_Frame->checksum);
+    uart_putc(UART_SCALLER_DEVICE, frame_stop_byte);
+    uart_tx_wait_blocking(UART_SCALLER_DEVICE);
+    // Serial.flush();
+    if (this->pin_rs485 != 0xff){
+         gpio_put(this->pin_rs485, 1);
+    }
 }
 
-bool calculate_crc(byte *buffer){
+bool calculate_crc(uint8_t *buffer){
     uint16_t sum = 0;
-    byte data_size = buffer[frame_position_data_size];
-    byte checksum_pos = data_size + 4;
-    for (byte i=0; i < (frame_buffer_size - 1); i++){
+    uint8_t data_size = buffer[frame_position_data_size];
+    uint8_t checksum_pos = data_size + 4;
+    for (uint8_t i=0; i < (frame_buffer_size - 1); i++){
         if (!(i > (data_size + 3))){
             sum = sum + buffer[i];
         }
@@ -152,13 +124,13 @@ bool calculate_crc(byte *buffer){
     }
 }
 
-scaller_frame generate_struct(byte *buffer){
-    byte data_size = buffer[frame_position_data_size];
+scaller_frame generate_struct(uint8_t *buffer){
+    uint8_t data_size = buffer[frame_position_data_size];
     scaller_frame Scaller_Frame;
     Scaller_Frame.address = buffer[frame_position_address];
     Scaller_Frame.function = buffer[frame_position_function + 1] | buffer[frame_position_function] << 8;
     Scaller_Frame.data_size = data_size;
-    for (byte i=0; i<data_size; i++){
+    for (uint8_t i=0; i<data_size; i++){
         Scaller_Frame.data[i] = buffer[frame_position_data + i];
     }
     Scaller_Frame.checksum = buffer[data_size + 5]; 
@@ -171,7 +143,7 @@ void generate_checksum(scaller_frame *Scaller_Frame){
     sum = sum + ((Scaller_Frame->function >> 8) & 0xff);
     sum = sum + (Scaller_Frame->function & 0xff);
     sum = sum + Scaller_Frame->data_size;
-    for (byte i=0; i<Scaller_Frame->data_size; i++){
+    for (uint8_t i=0; i<Scaller_Frame->data_size; i++){
         sum = sum + Scaller_Frame->data[i];
     }
     Scaller_Frame->checksum = sum % 0xff;

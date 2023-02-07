@@ -1,4 +1,5 @@
-#include <Arduino.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct ACK_DATA {
     uint8_t address;

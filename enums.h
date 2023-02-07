@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 enum DeviceMode {
     MODE_SLAVE,
     MODE_MASTER
